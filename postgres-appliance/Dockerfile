@@ -200,18 +200,20 @@ RUN export DEBIAN_FRONTEND=noninteractive \
     && apt-get install -y skytools3-ticker pspg \
 \
     && if [ "$DEMO" != "true" ]; then \
-        # patch, build and install pgbouncer
-        apt-get source pgbouncer \
-        && cd $(ls -d pgbouncer-*) \
-        # Set last_connect_time for pool only when it really failed to connect
+        git clone https://github.com/verrochio/pgbouncer.git \
+        && cd pgbouncer \
+        && git checkout tags/pgbouncer_1_8 \
+        && git submodule init \
+        && git submodule update \
         && curl -sL https://github.com/pgbouncer/pgbouncer/pull/127.diff | patch -p1 \
-        && curl -sL https://github.com/pgbouncer/pgbouncer/pull/326.diff | patch -p1 \
-        # Increase password size
+        && curl -sL https://gist.githubusercontent.com/verrochio/00ea81ea320e9eaa5aa9a4c74010f758/raw/b834ab177cb9ae53fab81c46197ab91cc83cfebd/pgbouncerPatch.diff | patch -p1 \
         && sed -i 's/\(MAX_PASSWORD\t\).*/\11024/' include/bouncer.h \
         && sed -i 's/\(SEND_wrap(\)512\(, pktbuf_write_PasswordMessage, res, sk, psw)\)/\11024\2/' include/pktbuf.h \
-        && debuild -b -uc -us \
-        && cd .. \
-        && dpkg -i pgbouncer_*.deb; \
+        && ./autogen.sh \
+        && ./configure \
+        && make \
+        && make install \
+        && cd ..; \
     fi \
 \
     # build and install missing packages
